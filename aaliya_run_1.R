@@ -15,7 +15,7 @@ Tx <- dplyr::select(Tx, "target_id", "gene_name")
 Txi_gene <- tximport(path, 
                      type = "kallisto", 
                      tx2gene = Tx, 
-                     txOut = FALSE, #determines whether your data represented at transcript or gene level
+                     txOut = FALSE,#this has been performed on gene level #determines whether your data represented at transcript or gene level
                      countsFromAbundance = "lengthScaledTPM",
                      ignoreTxVersion = TRUE)
 library(DESeq2)
