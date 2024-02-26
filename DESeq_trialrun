@@ -1,3 +1,19 @@
+#This is performed in Command Terminal  
+#use fastqc to check the quality of our fastq files:
+fastqc .fastq.gz 
+#Trimmomatic to trim the adapters 
+java -jar /home/thibault/Aaliya/Trimmomatic-0.39/trimmomatic-0.39.jar SE -phred33 BMS_S1_1.fastq.gz BMS_S1_1_trimmed.fastq.gz ILLUMINACLIP:/home/thibault/Aaliya/Trimmomatic-0.39/adapters/TruSeq3-SE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36
+# next, we want to build an index from our reference fasta file 
+# I get my reference mammalian transcriptome files from here: https://useast.ensembl.org/info/data/ftp/index.html
+kallisto index -i Homo_sapiens.GRCh38.cdna.all.index Homo_sapiens.GRCh38.cdna.all.fa.gz
+# now map reads to the indexed reference host transcriptome
+# use as many 'threads' as your machine will allow in order to speed up the read mapping process.
+# note that we're also including the '&>' at the end of each line
+# this takes the information that would've been printed to our terminal, and outputs this in a log file that is saved in /data/course_data
+# first the healthy subjects (HS), this is just an example
+kallisto quant -i Homo_sapiens.GRCh38.cdna.all.index -o HS01 -t 4 --single -l 250 -s 30 SRR8668755.fastq.gz &> HS01.log
+
+#Performed in R Studio 
 # load packages----
 library(rhdf5) #provides functions for handling hdf5 file formats (kallisto outputs bootstraps in this format)
 library(tidyverse) # provides access to Hadley Wickham's collection of R packages for data science, which we will use throughout the course
