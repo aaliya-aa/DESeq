@@ -1,17 +1,4 @@
-#This is performed in Command Terminal  
-#use fastqc to check the quality of our fastq files:
-fastqc .fastq.gz 
-#Trimmomatic to trim the adapters 
-java -jar /home/thibault/Aaliya/Trimmomatic-0.39/trimmomatic-0.39.jar SE -phred33 BMS_S1_1.fastq.gz BMS_S1_1_trimmed.fastq.gz ILLUMINACLIP:/home/thibault/Aaliya/Trimmomatic-0.39/adapters/TruSeq3-SE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36
-# next, we want to build an index from our reference fasta file 
-# I get my reference mammalian transcriptome files from here: https://useast.ensembl.org/info/data/ftp/index.html
-kallisto index -i Homo_sapiens.GRCh38.cdna.all.index Homo_sapiens.GRCh38.cdna.all.fa.gz
-# now map reads to the indexed reference host transcriptome
-# use as many 'threads' as your machine will allow in order to speed up the read mapping process.
-# note that we're also including the '&>' at the end of each line
-# this takes the information that would've been printed to our terminal, and outputs this in a log file that is saved in /data/course_data
-# first the healthy subjects (HS), this is just an example
-kallisto quant -i Homo_sapiens.GRCh38.cdna.all.index -o HS01 -t 4 --single -l 250 -s 30 SRR8668755.fastq.gz &> HS01.log
+
 
 #Performed in R Studio 
 # load packages----
@@ -20,65 +7,60 @@ library(tidyverse) # provides access to Hadley Wickham's collection of R package
 library(tximport) # package for getting Kallisto results into R
 library(ensembldb) #helps deal with ensembl
 library(EnsDb.Hsapiens.v86) #replace with your organism-specific database package
-targets <- read_tsv("design_1.txt")
+
+# Create a text file that has essentially 2 columns: one column should have sample information: file name in where fastq files have been stored (eg: WT_1) 
+and another column should condition type: treated or control
+
+
+targets <- read_tsv("study27.txt")
 path <- file.path(targets$sample, "abundance.tsv")
-all(file.exists(path)) 
+all(file.exists(path))
 Tx <- transcripts(EnsDb.Hsapiens.v86, columns=c("tx_id", "gene_name"))
 Tx <- as_tibble(Tx)
 Tx <- dplyr::rename(Tx, target_id = tx_id)
-
+#transcrip ID needs to be the first column in the dataframe
 Tx <- dplyr::select(Tx, "target_id", "gene_name")
-Txi_gene <- tximport(path, 
-                     type = "kallisto", 
-                     tx2gene = Tx, 
-                     txOut = FALSE,#this has been performed on gene level #determines whether your data represented at transcript or gene level
-                     countsFromAbundance = "lengthScaledTPM",
-                     ignoreTxVersion = TRUE)
+Txi_gene <- tximport(path,
+type = "kallisto",
+tx2gene = Tx,
+txOut = FALSE, #How does the result change if this =FALSE vs =TRUE?
+countsFromAbundance = "lengthScaledTPM",
+ignoreTxVersion = TRUE)
 library(DESeq2)
 dds <- DESeqDataSetFromTximport(txi = Txi_gene,
-                                colData = targets,
-                                design = ~ condition)
-dds <- DESeq(dds)
-results <- results(dds)
-filteredResults <- results[which(abs(results$log2FoldChange) > 1 & results$pvalue < 0.05),]
+colData = targets,
+design = ~ condition)
 
-write.csv(as.data.frame(filteredResults_1), file = "DESeq2_filtered_results_1.csv")
+# Load required libraries
+
 install.packages("openxlsx")
 library(openxlsx)
-filteredResults <- read.csv("DESeq2_filtered_results.csv")
-write.xlsx(filteredResults, file = "DESeq2_filtered_results.xlsx")
-
-#now PCA analysis 
 library(DESeq2)
-dds <- DESeq(dds) # assuming 'dds' is your DESeqDataSet
-vst_data <- vst(dds, blind=FALSE)
-
-pca_res <- plotPCA(vst_data, intgroup=c("condition"), returnData=TRUE)
-
-library(ggplot2)
-ggplot(pca_res, aes(x=PC1, y=PC2, color=condition)) + geom_point() + 
-  theme_minimal() + ggtitle("PCA of Treated vs Control")
-
-#to calculate % variance 
-
-# Assuming `vst_data` is your variance stabilized transformation data from DESeq2
-pca <- prcomp(assay(vst_data))
-
-# Calculate the explained variance
-explained_variance <- pca$sdev^2 / sum(pca$sdev^2) * 100
-
-# Create a data frame for plotting
-explained_df <- data.frame(PC = 1:length(explained_variance), Variance = explained_variance)
-
-# Now, `explained_df` should have the correct data for plotting or analysis.
-
-library(ggplot2)
-
-ggplot(explained_df, aes(x = PC, y = Variance)) +
-  geom_bar(stat = "identity", fill = "skyblue") +
-  theme_minimal() +
-  labs(title = "PCA Explained Variance", x = "Principal Component", y = "Variance Explained (%)")
-
-
+# Perform DESeq analysis
+dds <- DESeq(dds)
+results <- results(dds)
+# Save results to a CSV file
+write.csv(as.data.frame(results), file = "DESeq2_results.csv")
+library(DESeq2)
+dds <- DESeqDataSetFromTximport(txi = Txi_gene,
+colData = targets,
+design = ~ condition)
+# Load required libraries
+install.packages("openxlsx")
+library(openxlsx)
+library(DESeq2)
+# Perform DESeq analysis
+dds <- DESeq(dds)
+results <- results(dds)
+# Save results to a CSV file
+write.csv(as.data.frame(results), file = "DESeq2_results.csv")
+# Read results from CSV file
+results <- read.csv("DESeq2_results.csv")
+# Define differentially expressed genes
+# The normalisation range will differ from study to study 
+filteredResults <- results[which(abs(results$log2FoldChange) > 2 & results$pvalue < 0.05),]
+# Write filtered results to Excel file
+write.xlsx(filteredResults, file = "DESeq2_filtered_results.xlsx")
+install.packages("openxlsx")
 
 
