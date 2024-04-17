@@ -1,0 +1,5 @@
+sample	condition 
+C_1	control
+C_2	control
+FOXK2_1	treatment 
+FOXK2_2	treatment 
