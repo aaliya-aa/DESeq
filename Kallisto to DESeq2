@@ -23,7 +23,7 @@ Tx <- dplyr::select(Tx, "target_id", "gene_name")
 Txi_gene <- tximport(path,
 type = "kallisto",
 tx2gene = Tx,
-txOut = FALSE, #How does the result change if this =FALSE vs =TRUE?
+txOut = FALSE, 
 countsFromAbundance = "lengthScaledTPM",
 ignoreTxVersion = TRUE)
 library(DESeq2)
